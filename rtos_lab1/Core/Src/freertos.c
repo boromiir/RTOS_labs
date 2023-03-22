@@ -171,14 +171,17 @@ void StartButtonTask(void const * argument)
 {
   /* USER CODE BEGIN StartButtonTask */
   /* Infinite loop */
+  TickType_t lastWakeTime;
+  lastWakeTime = xTaskGetTickCount();
+
   for(;;)
   {
 	if(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET)
 	{
 		blinkPeriod += BLINK_PERIOD_OFFSET;
-		osDelay(20);
+		osDelay(DEBOUNCE);
 	}
-    osDelay(1000);
+	vTaskDelayUntil(&lastWakeTime, BUTTON_POLLING_TIME);
   }
   /* USER CODE END StartButtonTask */
 }

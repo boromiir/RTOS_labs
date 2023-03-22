@@ -76,8 +76,10 @@ void Error_Handler(void);
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
-#define DEFAULT_BLINK_PERIOD 100
-#define BLINK_PERIOD_OFFSET 100
+#define BUTTON_POLLING_TIME		1000
+#define DEBOUNCE				20
+#define DEFAULT_BLINK_PERIOD	100
+#define BLINK_PERIOD_OFFSET		100
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

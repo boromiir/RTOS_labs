@@ -176,12 +176,12 @@ void StartButtonTask(void const * argument)
 
   for(;;)
   {
-	if(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET)
-	{
-		blinkPeriod += BLINK_PERIOD_OFFSET;
-		osDelay(DEBOUNCE);
-	}
-	vTaskDelayUntil(&lastWakeTime, BUTTON_POLLING_TIME);
+    if(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET)
+    {
+      blinkPeriod += BLINK_PERIOD_OFFSET;
+      osDelay(DEBOUNCE);
+    }
+    vTaskDelayUntil(&lastWakeTime, BUTTON_POLLING_TIME);
   }
   /* USER CODE END StartButtonTask */
 }

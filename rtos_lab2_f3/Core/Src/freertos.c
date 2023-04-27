@@ -47,6 +47,7 @@
 /* USER CODE BEGIN Variables */
 dataStruct measuredData;
 dataStruct rcvMessage;
+uint16_t average;
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -62,10 +63,22 @@ const osThreadAttr_t dataTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for UART_task */
+osThreadId_t UART_taskHandle;
+const osThreadAttr_t UART_task_attributes = {
+  .name = "UART_task",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* Definitions for dataQueue */
 osMessageQueueId_t dataQueueHandle;
 const osMessageQueueAttr_t dataQueue_attributes = {
   .name = "dataQueue"
+};
+/* Definitions for UART_queue */
+osMessageQueueId_t UART_queueHandle;
+const osMessageQueueAttr_t UART_queue_attributes = {
+  .name = "UART_queue"
 };
 /* Definitions for ADCTimer */
 osTimerId_t ADCTimerHandle;
@@ -80,6 +93,7 @@ const osTimerAttr_t ADCTimer_attributes = {
 
 void StartDefaultTask(void *argument);
 void StartDataTask(void *argument);
+void StartUART_task(void *argument);
 void Callback_ADCTimer(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -115,6 +129,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of dataQueue */
   dataQueueHandle = osMessageQueueNew (10, sizeof(uint32_t), &dataQueue_attributes);
 
+  /* creation of UART_queue */
+  UART_queueHandle = osMessageQueueNew (10, sizeof(uint32_t), &UART_queue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -125,6 +142,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of dataTask */
   dataTaskHandle = osThreadNew(StartDataTask, NULL, &dataTask_attributes);
+
+  /* creation of UART_task */
+  UART_taskHandle = osThreadNew(StartUART_task, NULL, &UART_task_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -164,13 +184,46 @@ void StartDefaultTask(void *argument)
 void StartDataTask(void *argument)
 {
   /* USER CODE BEGIN StartDataTask */
+  uint32_t count = 0;
+  uint32_t sum = 0;
   /* Infinite loop */
   for(;;)
   {
-	osMessageQueueGet(dataQueueHandle, &rcvMessage, 0, 0);
+	if (osMessageQueueGetCount(dataQueueHandle) != 0)
+	{
+		osMessageQueueGet(dataQueueHandle, &rcvMessage, 0, 0);
+		sum += rcvMessage.tempValue;
+		count++;
+		average = sum/count;
+		osMessageQueuePut(UART_queueHandle, &average, 0, 0);
+	}
     osDelay(1);
   }
   /* USER CODE END StartDataTask */
+}
+
+/* USER CODE BEGIN Header_StartUART_task */
+/**
+* @brief Function implementing the UART_task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartUART_task */
+void StartUART_task(void *argument)
+{
+  /* USER CODE BEGIN StartUART_task */
+  uint16_t dataToPrint;
+  /* Infinite loop */
+  for(;;)
+  {
+	if (osMessageQueueGetCount(UART_queueHandle) != 0)
+	{
+	  osMessageQueueGet(UART_queueHandle, &dataToPrint, 0, 0);
+	  printf("average temp: %d\n\r", dataToPrint);
+	}
+    osDelay(1);
+  }
+  /* USER CODE END StartUART_task */
 }
 
 /* Callback_ADCTimer function */

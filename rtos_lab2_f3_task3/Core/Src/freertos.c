@@ -186,7 +186,7 @@ void StartDataTask(void *argument)
 		count++;
 		average = sum/count;
 		osMessageQueuePut(UART_queueHandle, &average, 0, 0);
-		HAL_GPIO_WritePin(analyzer_GPIO_Port, analyzer_Pin, GPIO_PIN_ReSET);
+		HAL_GPIO_WritePin(analyzer_GPIO_Port, analyzer_Pin, GPIO_PIN_RESET);
 	}
     osDelay(1);
   }

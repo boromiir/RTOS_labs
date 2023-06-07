@@ -34,6 +34,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+//counter for SystemView
+#define DWT_CTRL (*(volatile uint32_t*)0xE0001000)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -65,6 +67,7 @@ void MX_FREERTOS_Init(void);
 PUTCHAR_PROTOTYPE
 {
   HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 10);
+  //osDelay(10);
   return ch;
 }
 /* USER CODE END 0 */
@@ -99,7 +102,9 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  //enable counter and change priority grouping for SystemView
+  DWT_CTRL |= (1 << 0);
+  NVIC_SetPriorityGrouping( 0 );
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

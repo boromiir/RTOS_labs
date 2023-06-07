@@ -59,10 +59,13 @@ osThreadId taskCHandle;
 osThreadId taskUARTHandle;
 osMutexId meanMutexHandle;
 osSemaphoreId meanSemaphoreHandle;
+osSemaphoreId UARTSemaphoreHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+void randomizeAndCalculate(float* randsArray, float* sum, float* squareSum);
+void acquireSemaphoreOrMutex();
+void releaseSemaphoreOrMutex();
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void const * argument);
@@ -124,6 +127,10 @@ void MX_FREERTOS_Init(void) {
   osSemaphoreDef(meanSemaphore);
   meanSemaphoreHandle = osSemaphoreCreate(osSemaphore(meanSemaphore), 1);
 
+  /* definition and creation of UARTSemaphore */
+  osSemaphoreDef(UARTSemaphore);
+  UARTSemaphoreHandle = osSemaphoreCreate(osSemaphore(UARTSemaphore), 3);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -142,23 +149,29 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of taskA */
-  osThreadDef(taskA, StartTaskA, osPriorityLow, 0, 1280);
+  osThreadDef(taskA, StartTaskA, osPriorityBelowNormal, 0, 1280);
   taskAHandle = osThreadCreate(osThread(taskA), NULL);
 
   /* definition and creation of taskB */
-  osThreadDef(taskB, StartTaskB, osPriorityBelowNormal, 0, 1280);
+  osThreadDef(taskB, StartTaskB, osPriorityNormal, 0, 1280);
   taskBHandle = osThreadCreate(osThread(taskB), NULL);
 
   /* definition and creation of taskC */
-  osThreadDef(taskC, StartTaskC, osPriorityNormal, 0, 1280);
+  osThreadDef(taskC, StartTaskC, osPriorityHigh, 0, 1280);
   taskCHandle = osThreadCreate(osThread(taskC), NULL);
 
   /* definition and creation of taskUART */
-  osThreadDef(taskUART, StartTaskUART, osPriorityHigh, 0, 4096);
+  osThreadDef(taskUART, StartTaskUART, osPriorityLow, 0, 4096);
   taskUARTHandle = osThreadCreate(osThread(taskUART), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+
+  //initialization of SystemView (here and not in main because it has to be done after init of OS but before start and in
+  //main code would be deleted by CubeMX
+  SEGGER_SYSVIEW_Conf();
+  SEGGER_SYSVIEW_Start();
+
   /* USER CODE END RTOS_THREADS */
 
 }
@@ -197,28 +210,21 @@ void StartTaskA(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    sum = 0;
-	squareSum = 0;
-	srand(time(NULL));
-	for(int i = 0; i < NUMBER_OF_RANDS; i++)
-	{
-		randValue[i] = (float)rand()/(float)(RAND_MAX/2) - 1;
-		sum += randValue[i];
-		squareSum += ((randValue[i]) * (randValue[i]));
-	}
-#ifdef SEMAPHORE_VARIANT
-	osSemaphoreWait(meanSemaphoreHandle, osWaitForever);
-#elif MUTEX_VARIANT
-	osMutexWait(meanMutexHandle, osWaitForever);
-#endif
+    randomizeAndCalculate(randValue, &sum, &squareSum);
+
+    acquireSemaphoreOrMutex();
+
 	allMeans.taskA_mean = sum / NUMBER_OF_RANDS;
 	allMeans.taskA_meanSquare = sqrt(squareSum / NUMBER_OF_RANDS);
-#ifdef SEMAPHORE_VARIANT
-	osSemaphoreRelease(meanSemaphoreHandle);
-#elif MUTEX_VARIANT
-	osMutexRelease(meanMutexHandle);
-#endif
-    osDelay(1);
+
+	releaseSemaphoreOrMutex();
+
+    //osDelay(1);
+	//osThreadYield();
+	//xTaskNotifyGive(taskUARTHandle);
+//	xTaskNotifyGiveIndexed(taskUARTHandle, 0);
+	osSemaphoreRelease(UARTSemaphoreHandle);
+	vTaskSuspend(NULL);
   }
   /* USER CODE END StartTaskA */
 }
@@ -239,28 +245,20 @@ void StartTaskB(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    sum = 0;
-	squareSum = 0;
-	srand(time(NULL));
-	for(int i = 0; i < NUMBER_OF_RANDS; i++)
-	{
-		randValue[i] = (float)rand()/(float)(RAND_MAX/2) - 1;
-		sum += randValue[i];
-		squareSum += ((randValue[i]) * (randValue[i]));
-	}
-#ifdef SEMAPHORE_VARIANT
-	osSemaphoreWait(meanSemaphoreHandle, osWaitForever);
-#elif MUTEX_VARIANT
-	osMutexWait(meanMutexHandle, osWaitForever);
-#endif
+	randomizeAndCalculate(randValue, &sum, &squareSum);
+
+	acquireSemaphoreOrMutex();
+
 	allMeans.taskB_mean = sum / NUMBER_OF_RANDS;
 	allMeans.taskB_meanSquare = sqrt(squareSum / NUMBER_OF_RANDS);
-#ifdef SEMAPHORE_VARIANT
-	osSemaphoreRelease(meanSemaphoreHandle);
-#elif MUTEX_VARIANT
-	osMutexRelease(meanMutexHandle);
-#endif
-    osDelay(1);
+
+	releaseSemaphoreOrMutex();
+
+    //osDelay(1);
+    //osThreadYield();
+//	xTaskNotifyGiveIndexed(taskUARTHandle, 1);
+	osSemaphoreRelease(UARTSemaphoreHandle);
+    vTaskSuspend(NULL);
   }
   /* USER CODE END StartTaskB */
 }
@@ -282,28 +280,20 @@ void StartTaskC(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-    sum = 0;
-    squareSum = 0;
-	srand(time(NULL));
-	for(int i = 0; i < NUMBER_OF_RANDS; i++)
-	{
-		randValue[i] = (float)rand()/(float)(RAND_MAX/2) - 1;
-		sum += randValue[i];
-		squareSum += ((randValue[i]) * (randValue[i]));
-	}
-#ifdef SEMAPHORE_VARIANT
-	osSemaphoreWait(meanSemaphoreHandle, osWaitForever);
-#elif MUTEX_VARIANT
-	osMutexWait(meanMutexHandle, osWaitForever);
-#endif
+	randomizeAndCalculate(randValue, &sum, &squareSum);
+
+	acquireSemaphoreOrMutex();
+
 	allMeans.taskC_mean = sum / NUMBER_OF_RANDS;
 	allMeans.taskC_meanSquare = sqrt(squareSum / NUMBER_OF_RANDS);
-#ifdef SEMAPHORE_VARIANT
-	osSemaphoreRelease(meanSemaphoreHandle);
-#elif MUTEX_VARIANT
-	osMutexRelease(meanMutexHandle);
-#endif
-    osDelay(1);
+
+	releaseSemaphoreOrMutex();
+
+    //osDelay(1);
+	//osThreadYield();
+//	xTaskNotifyGiveIndexed(taskUARTHandle, 2);
+	osSemaphoreRelease(UARTSemaphoreHandle);
+	vTaskSuspend(NULL);
   }
   /* USER CODE END StartTaskC */
 }
@@ -323,28 +313,63 @@ void StartTaskUART(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+//	ulTaskNotifyTakeIndexed(0, pdFALSE, portMAX_DELAY);
+//	ulTaskNotifyTakeIndexed(1, pdFALSE, portMAX_DELAY);
+//	ulTaskNotifyTakeIndexed(2, pdFALSE, portMAX_DELAY);
+//	ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+	osSemaphoreWait(UARTSemaphoreHandle, osWaitForever);
+	osSemaphoreWait(UARTSemaphoreHandle, osWaitForever);
+	osSemaphoreWait(UARTSemaphoreHandle, osWaitForever);
+
 	HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 
-#ifdef SEMAPHORE_VARIANT
-	osSemaphoreWait(meanSemaphoreHandle, osWaitForever);
-#elif MUTEX_VARIANT
-	osMutexWait(meanMutexHandle, osWaitForever);
-#endif
+    acquireSemaphoreOrMutex();
+
 	finalMean = (allMeans.taskA_mean + allMeans.taskB_mean + allMeans.taskC_mean) / NUMBER_OF_TASKS;
 	finalMeanSquare = (allMeans.taskA_meanSquare + allMeans.taskB_meanSquare + allMeans.taskC_meanSquare) / NUMBER_OF_TASKS;
 	printf("Hello from uart, calculated data:\r\n mean: %.8f\r\n mean square: %.8f\r\n\r\n", finalMean, finalMeanSquare);
-#ifdef SEMAPHORE_VARIANT
-	osSemaphoreRelease(meanSemaphoreHandle);
-#elif MUTEX_VARIANT
-	osMutexRelease(meanMutexHandle);
-#endif
 
-    osDelay(1000);
+	releaseSemaphoreOrMutex();
+
+	vTaskResume(taskAHandle);
+	vTaskResume(taskBHandle);
+	vTaskResume(taskCHandle);
+
+    osDelay(1);
   }
   /* USER CODE END StartTaskUART */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+void randomizeAndCalculate(float* randsArray, float* sum, float* squareSum)
+{
+	*sum = 0;
+	*squareSum = 0;
+	srand(osKernelSysTick());
+	for(int i = 0; i < NUMBER_OF_RANDS; i++)
+	{
+		randsArray[i] = (float)rand()/(float)(RAND_MAX/2) - 1;
+		*sum += randsArray[i];
+		*squareSum += ((randsArray[i]) * (randsArray[i]));
+	}
+}
 
+void acquireSemaphoreOrMutex()
+{
+#ifdef SEMAPHORE_VARIANT
+	osSemaphoreWait(meanSemaphoreHandle, osWaitForever);
+#else
+	osMutexWait(meanMutexHandle, osWaitForever);
+#endif
+}
+
+void releaseSemaphoreOrMutex()
+{
+#ifdef SEMAPHORE_VARIANT
+	osSemaphoreRelease(meanSemaphoreHandle);
+#else
+	osMutexRelease(meanMutexHandle);
+#endif
+}
 /* USER CODE END Application */

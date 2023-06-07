@@ -70,6 +70,7 @@
 #define configUSE_MUTEXES                        1
 #define configQUEUE_REGISTRY_SIZE                8
 #define configCHECK_FOR_STACK_OVERFLOW           2
+#define configUSE_COUNTING_SEMAPHORES            1
 #define configENABLE_BACKWARD_COMPATIBILITY      0
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION  1
 #define configUSE_POSIX_ERRNO                    1
@@ -93,7 +94,7 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelete                  1
 #define INCLUDE_vTaskCleanUpResources        0
 #define INCLUDE_vTaskSuspend                 1
-#define INCLUDE_vTaskDelayUntil              0
+#define INCLUDE_vTaskDelayUntil              1
 #define INCLUDE_vTaskDelay                   1
 #define INCLUDE_xTaskGetSchedulerState       1
 
@@ -140,6 +141,13 @@ standard names. */
 
 /* USER CODE BEGIN Defines */
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
+#include "SEGGER_SYSVIEW_FreeRTOS.h"
+
+#define INCLUDE_xTaskGetIdleTaskHandle 1
+#define INCLUDE_pxTaskGetStackStart    1
+
+#define configUSE_TASK_NOTIFICATIONS   1
+#define configTASK_NOTIFICATION_ARRAY_ENTRIES 5
 /* USER CODE END Defines */
 
 #endif /* FREERTOS_CONFIG_H */
